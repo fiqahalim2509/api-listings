@@ -1,0 +1,55 @@
+name: Deploy VitePress site to Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm # Change to pnpm or yarn if you use those
+          
+      # Install dependencies inside your subfolder
+      - name: Install dependencies
+        run: npm ci
+        working-directory: api-listings
+
+      #  Build the VitePress site from your subfolder
+      - name: Build with VitePress
+        run: npm run docs:build
+        working-directory: api-listings
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      # Upload the built files (VitePress outputs to .vitepress/dist by default)
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: api-listings/public  # Updated from api-listings/.vitepress/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
